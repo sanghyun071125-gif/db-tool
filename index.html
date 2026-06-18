@@ -1,0 +1,954 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+  <title>DB 리스트 변환 | JCM 도우미</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.4.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+/* ═══ 원본 스타일 전체 유지 ═══ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{--blue-dark:#1e3a5f;--blue-main:#2563eb;--blue-mid:#3b82f6;--blue-light:#38bdf8;--blue-pale:#dbeafe;--green:#10b981;--red:#ef4444;--bg:#f0f4f8;--surface:#ffffff;--border:#e2e8f0;--text:#1a2340;--text-sub:#64748b;--text-hint:#94a3b8;--radius:12px;--radius-sm:8px;--shadow:0 2px 16px rgba(0,0,0,.08);--header-h:60px;}
+html,body{height:100%;font-family:'Pretendard','Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);font-size:14px;}
+.site-header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:linear-gradient(135deg,var(--blue-dark) 0%,#1d4ed8 100%);box-shadow:0 2px 20px rgba(30,58,95,.4);z-index:200;}
+.header-inner{max-width:100%;height:100%;padding:0 24px;display:flex;align-items:center;justify-content:space-between;}
+.logo-wrap{display:flex;align-items:center;gap:12px;color:#fff;}
+.logo-wrap>i{font-size:24px;opacity:.9;}
+.logo-title{font-size:17px;font-weight:700;}
+.logo-sub{font-size:11px;opacity:.65;margin-top:1px;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:9px 16px;border:none;border-radius:var(--radius-sm);font-size:13px;font-weight:600;font-family:inherit;cursor:pointer;transition:all .18s;white-space:nowrap;}
+.btn-primary{background:linear-gradient(135deg,var(--blue-main),#1d4ed8);color:#fff;}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 6px 20px rgba(37,99,235,.35);}
+.btn-success{background:linear-gradient(135deg,var(--green),#059669);color:#fff;}
+.btn-success:hover{transform:translateY(-1px);box-shadow:0 4px 14px rgba(16,185,129,.3);}
+.btn-ghost{background:#f1f5f9;color:#475569;border:1.5px solid var(--border);}
+.btn-ghost:hover{background:#e2e8f0;}
+.btn-sm{padding:6px 12px;font-size:12px;}
+.btn-danger{background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);background:#1e293b;color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:9999;transition:.3s;opacity:0;display:flex;align-items:center;gap:8px;}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* 네비 */
+.tool-nav{display:flex;gap:6px;}
+.tool-nav a{color:rgba(255,255,255,.75);text-decoration:none;font-size:13px;font-weight:600;padding:5px 11px;border-radius:6px;transition:all .15s;}
+.tool-nav a:hover,.tool-nav a.active{background:rgba(255,255,255,.2);color:#fff;}
+
+/* 페이지 */
+.page-wrap{max-width:100%;margin:0;padding:10px 10px;}
+.top-cards{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px;}
+@media(max-width:860px){.top-cards{grid-template-columns:1fr;}}
+
+/* 카드 */
+.card{background:#fff;border-radius:16px;box-shadow:0 2px 16px rgba(0,0,0,.07);overflow:hidden;}
+.card-hd{background:linear-gradient(135deg,#1e3a5f,#2563eb);color:#fff;padding:14px 20px;font-size:14px;font-weight:700;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.card-bd{padding:20px;}
+
+/* 드롭존 */
+.dropzone{border:2.5px dashed #93c5fd;border-radius:12px;background:#f0f9ff;padding:36px 20px;text-align:center;cursor:pointer;transition:all .2s;position:relative;}
+.dropzone:hover,.dropzone.dragover{border-color:#2563eb;background:#dbeafe;}
+.dropzone i{font-size:36px;color:#93c5fd;display:block;margin-bottom:10px;}
+.dropzone p{font-size:14px;color:#64748b;margin-bottom:4px;}
+.dropzone small{font-size:12px;color:#94a3b8;}
+.dropzone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+
+/* 붙여넣기 */
+.paste-area{width:100%;min-height:240px;border:1.5px solid #e2e8f0;border-radius:10px;padding:12px;font-size:12.5px;font-family:'Consolas','D2Coding',monospace;background:#f8fafc;color:#334155;resize:vertical;line-height:1.7;}
+.paste-area:focus{outline:none;border-color:#2563eb;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+
+/* 탭 */
+.inp-tabs{display:flex;gap:0;margin-bottom:12px;border:1.5px solid #e2e8f0;border-radius:8px;overflow:hidden;}
+.inp-tab{flex:1;padding:9px;text-align:center;font-size:13px;font-weight:600;color:#94a3b8;background:#f8fafc;border:none;cursor:pointer;transition:all .15s;}
+.inp-tab.active{background:#2563eb;color:#fff;}
+
+/* 결과 테이블 */
+.result-table-wrap{overflow-x:auto;border:1.5px solid #e2e8f0;border-radius:10px;}
+.result-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:auto;}
+.result-table th{background:#1e3a5f;color:#fff;padding:7px 6px;text-align:center;white-space:nowrap;font-size:10px;position:sticky;top:0;z-index:1;}
+.result-table td{padding:6px 6px;border-bottom:1px solid #f1f5f9;color:#334155;vertical-align:middle;}
+.result-table td.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.result-table tr:hover td{background:#f0f9ff;}
+.result-table tr:last-child td{border-bottom:none;}
+.td-title{white-space:normal;min-width:200px;max-width:280px;font-weight:600;color:#1e3a5f;font-size:11px;line-height:1.5;}
+.td-copy{cursor:pointer;color:#2563eb;padding:3px 6px;border-radius:4px;transition:background .15s;background:none;border:none;font-size:12px;}
+.td-copy:hover{background:#dbeafe;}
+.stat-bar{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;}
+.stat-chip{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:7px 14px;font-size:13px;text-align:center;}
+.stat-chip strong{display:block;font-size:19px;font-weight:800;color:#1e3a5f;}
+.stat-chip span{font-size:11px;color:#64748b;}
+.info-box{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:11px 14px;font-size:13px;color:#1e3a5f;margin-bottom:10px;line-height:1.7;display:flex;gap:8px;align-items:flex-start;}
+.info-box i{color:#2563eb;flex-shrink:0;margin-top:1px;}
+.warn-box{background:#fff8ed;border:1px solid #fcd34d;border-radius:8px;padding:11px 14px;font-size:12.5px;color:#92400e;margin-bottom:10px;line-height:1.7;display:flex;gap:8px;align-items:flex-start;}
+.warn-box i{color:#f59e0b;flex-shrink:0;margin-top:1px;}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;}
+.rule-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.rule-item{background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px 12px;font-size:12px;}
+.rule-key{font-weight:700;color:#1e3a5f;margin-bottom:3px;}
+.rule-val{color:#64748b;line-height:1.6;}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:50px 20px;color:#94a3b8;text-align:center;}
+.empty-state i{font-size:38px;margin-bottom:12px;opacity:.4;}
+.empty-state p{font-size:14px;font-weight:600;margin-bottom:5px;}
+.empty-state small{font-size:12px;}
+.privacy-badge{display:inline-flex;align-items:center;gap:4px;background:#fee2e2;color:#991b1b;border-radius:4px;padding:2px 7px;font-size:10px;font-weight:700;}
+.td-select{font-size:10px;padding:2px 4px;border:1px solid #e2e8f0;border-radius:5px;background:#f8fafc;color:#334155;cursor:pointer;max-width:100px;width:100%;}
+.td-select:focus{outline:none;border-color:#2563eb;}
+.td-tag-input{font-size:10px;padding:2px 5px;border:1px solid #e2e8f0;border-radius:4px;color:#64748b;width:140px;}
+.td-tag-input:focus{outline:none;border-color:#2563eb;}
+.td-desc-input{width:100%;font-size:10px;line-height:1.5;padding:3px 5px;border:1px solid #e2e8f0;border-radius:5px;background:#f8fafc;color:#334155;resize:vertical;font-family:inherit;}
+.td-desc-input:focus{outline:none;border-color:#2563eb;background:#fff;}
+
+/* ═══ 새로 추가: 권리금 업브리핑 ═══ */
+.slider-section{margin-bottom:16px;}
+.slider-box{background:#fff8ed;border:1.5px solid #fcd34d;border-radius:12px;padding:14px;}
+.slider-row{display:flex;align-items:center;gap:12px;margin-bottom:8px;}
+.slider-row input[type=range]{flex:1;accent-color:#f59e0b;height:5px;}
+.slider-val{font-size:24px;font-weight:800;color:#d97706;min-width:58px;text-align:right;}
+.slider-preview{font-size:11px;color:#92400e;background:#fff;border-radius:8px;padding:7px 10px;border:1px solid #fde68a;}
+
+/* ═══ 새로 추가: 월지출 세부내역 ═══ */
+.expense-section{margin-top:16px;}
+.expense-section-title{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px;display:flex;align-items:center;gap:5px;}
+.expense-section-title i{color:#2563eb;}
+
+.expense-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:14px;}
+.esc{border-radius:10px;padding:10px 12px;text-align:center;}
+.esc-b{background:#eff6ff;border:1.5px solid #bfdbfe;}
+.esc-r{background:#fff1f2;border:1.5px solid #fecdd3;}
+.esc-g{background:#f0fdf4;border:1.5px solid #bbf7d0;}
+.esc-label{font-size:10px;color:#94a3b8;margin-bottom:3px;}
+.esc-val{font-size:15px;font-weight:800;}
+.esc-b .esc-val{color:#1d4ed8;}
+.esc-r .esc-val{color:#e11d48;}
+.esc-g .esc-val{color:#16a34a;}
+.esc-pct{font-size:10px;color:#94a3b8;margin-top:1px;}
+
+.exp-item{margin-bottom:6px;}
+.exp-row{display:grid;grid-template-columns:80px 1fr 72px;align-items:center;gap:8px;margin-bottom:2px;}
+.exp-label{font-size:12px;font-weight:600;color:#334155;}
+.exp-inp-wrap{position:relative;}
+.exp-inp{width:100%;padding:7px 32px 7px 9px;border:1.5px solid #e2e8f0;border-radius:8px;font-size:13px;font-family:inherit;background:#f8fafc;transition:.15s;}
+.exp-inp:focus{outline:none;border-color:#2563eb;background:#fff;box-shadow:0 0 0 3px rgba(37,99,235,.1);}
+.exp-unit{position:absolute;right:8px;top:50%;transform:translateY(-50%);font-size:10px;color:#94a3b8;pointer-events:none;}
+.exp-pct-badge{font-size:10px;font-weight:700;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:6px;padding:3px 5px;text-align:center;white-space:nowrap;}
+.exp-pct-badge.hi{color:#dc2626;background:#fef2f2;border-color:#fecaca;}
+.exp-bar-row{display:grid;grid-template-columns:80px 1fr;gap:8px;margin-bottom:3px;}
+.exp-bar-bg{height:4px;background:#f1f5f9;border-radius:99px;overflow:hidden;}
+.exp-bar-fill{height:100%;border-radius:99px;transition:width .4s;}
+
+.exp-total-row{display:flex;justify-content:space-between;align-items:center;border-top:1.5px dashed #e2e8f0;padding-top:10px;margin-top:6px;}
+.exp-total-label{font-size:13px;font-weight:700;color:#1e3a5f;}
+.exp-total-val{font-size:15px;font-weight:800;color:#e11d48;}
+
+.profit-banner{background:linear-gradient(135deg,#f0fdf4,#dcfce7);border:1.5px solid #86efac;border-radius:10px;padding:10px 14px;margin-top:10px;display:flex;justify-content:space-between;align-items:center;}
+.pb-label{font-size:12px;font-weight:700;color:#166534;}
+.pb-formula{font-size:10px;color:#4ade80;margin-top:2px;}
+.pb-value{font-size:18px;font-weight:800;color:#15803d;text-align:right;}
+.pb-pct{font-size:11px;color:#4ade80;text-align:right;margin-top:1px;}
+
+.chart-wrap{max-width:190px;margin:14px auto 0;}
+.divider{height:1px;background:#f1f5f9;margin:12px 0;}
+
+/* 옵션 섹션 구분선 */
+.opt-label{font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+  </style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="header-inner">
+    <div class="logo-wrap">
+      <i class="fas fa-store-alt"></i>
+      <div>
+        <div class="logo-title">JCM 매물 등록 도우미</div>
+        <div class="logo-sub">창업브릿지 · muv.kr 전용</div>
+      </div>
+    </div>
+    <nav class="tool-nav">
+      <a href="index.html"><i class="fas fa-magic"></i> 매물 생성기</a>
+      <a href="export.html"><i class="fas fa-file-export"></i> CSV/엑셀 내보내기</a>
+      <a href="db-import.html" class="active"><i class="fas fa-table"></i> DB 리스트 변환</a>
+    </nav>
+  </div>
+</header>
+
+<div class="page-wrap" style="margin-top:60px;">
+  <div class="top-cards">
+
+    <!-- ===== 왼쪽: 입력 ===== -->
+    <div class="card">
+      <div class="card-hd"><i class="fas fa-paste"></i> DB 리스트 붙여넣기</div>
+      <div class="card-bd">
+
+        <div class="inp-tabs">
+          <button class="inp-tab active" onclick="switchTab('paste',this)"><i class="fas fa-paste"></i> 텍스트 붙여넣기</button>
+          <button class="inp-tab" onclick="switchTab('file',this)"><i class="fas fa-file-excel"></i> 파일 업로드</button>
+        </div>
+
+        <div id="inp-paste">
+          <textarea id="pasteText" class="paste-area" placeholder="초보창업에서 복사한 내용을 여기에 붙여넣으세요..." style="min-height:280px;"></textarea>
+          <div class="btn-row">
+            <button class="btn btn-primary" onclick="parsePaste()"><i class="fas fa-magic"></i> 변환 시작</button>
+            <button class="btn btn-ghost" onclick="document.getElementById('pasteText').value='';clearResult()"><i class="fas fa-eraser"></i> 지우기</button>
+            <button class="btn btn-ghost" onclick="loadSample()"><i class="fas fa-flask"></i> 샘플</button>
+          </div>
+        </div>
+
+        <div id="inp-file" style="display:none;">
+          <div class="dropzone" id="dropzone">
+            <input type="file" accept=".xlsx,.xls,.csv" onchange="handleFile(this.files[0])"/>
+            <i class="fas fa-cloud-upload-alt"></i>
+            <p><strong>파일을 끌어다 놓거나 클릭하여 선택</strong></p>
+            <small>.xlsx, .xls, .csv 지원</small>
+          </div>
+          <div id="fileInfo" style="display:none;margin-top:10px;padding:10px 14px;background:#f0fdf4;border-radius:8px;font-size:13px;color:#166534;"></div>
+        </div>
+
+        <!-- 생성 규칙 (원본 유지) -->
+        <div style="margin-top:16px;">
+          <div style="font-size:11px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;">
+            <i class="fas fa-cog" style="margin-right:4px;color:#2563eb;"></i> 자동 생성 규칙
+          </div>
+          <div class="rule-grid">
+            <div class="rule-item">
+              <div class="rule-key">✅ 유지하는 항목</div>
+              <div class="rule-val">브랜드명 · 지역 · 층 · 평<br>보증금 · 권리금 · 합계 · 월세 · 월매출</div>
+            </div>
+            <div class="rule-item">
+              <div class="rule-key" style="color:#ef4444;">❌ 제거하는 항목</div>
+              <div class="rule-val">지점명(브랜드명 뒤 -○○점)<br>상세주소 · 순번 · 상태 · 매물종류<br>담당자 · 업종 · 수정일 · 순수익</div>
+            </div>
+            <div class="rule-item">
+              <div class="rule-key">📌 상품명 패턴</div>
+              <div class="rule-val">+[지역] [브랜드명] 양도양수<br>/ [특징] / 권리금 [N]만</div>
+            </div>
+            <div class="rule-item">
+              <div class="rule-key">🏷️ 해시태그</div>
+              <div class="rule-val">#[시도] #[업종] #[권리금범위]<br>#[순수익범위]</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===== 오른쪽: 옵션 ===== -->
+    <div class="card">
+      <div class="card-hd"><i class="fas fa-sliders-h"></i> 생성 옵션</div>
+      <div class="card-bd" style="overflow-y:auto;max-height:calc(100vh - 140px);">
+
+        <!-- 상품명 패턴 (원본 유지) -->
+        <div style="margin-bottom:14px;">
+          <div class="opt-label">상품명 패턴 (행마다 드롭다운 선택)</div>
+          <div style="font-size:11px;color:#64748b;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:10px;line-height:1.9;">
+            <div><strong>A</strong> — +[지역] [브랜드] 양도양수 / [특징] / 권리금 [N]만</div>
+            <div><strong>B</strong> — +[브랜드] 양도양수 / [지역] / 월매출 [N]만 / 권리금 [N]만</div>
+            <div><strong>C</strong> — +[지역] [브랜드] / 권리금 [N]만 / 월매출 [N]만</div>
+            <div><strong>D</strong> — +[지역] [브랜드] 양도 / 월매출 [N]만 / [운영구조]</div>
+            <div><strong>E</strong> — +[브랜드] [지역] 양도양수 / 권리금 [N]만 / [특징]</div>
+          </div>
+        </div>
+
+        <!-- 특징 문구 (원본 유지) -->
+        <div style="margin-bottom:14px;">
+          <div class="opt-label">특징 문구 포함</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;font-size:13px;">
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="opt_sales" checked> 월매출 [N]만</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="opt_instant"> 즉시 운영 가능</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="opt_highsales"> 권리금 대비 높은 매출</label>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;"><input type="checkbox" id="opt_franchise"> 프랜사이즈 본사 지원</label>
+          </div>
+        </div>
+
+        <!-- 컨설턴트 (원본 유지) -->
+        <div style="margin-bottom:14px;">
+          <div class="opt-label">컨설턴트 기본값</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <div>
+              <div style="font-size:11px;color:#94a3b8;margin-bottom:3px;">이름</div>
+              <input id="cName" type="text" value="박상현" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;"/>
+            </div>
+            <div>
+              <div style="font-size:11px;color:#94a3b8;margin-bottom:3px;">전화번호</div>
+              <input id="cPhone" type="text" value="010-4580-9993" style="width:100%;padding:7px 9px;border:1.5px solid #e2e8f0;border-radius:6px;font-size:13px;"/>
+            </div>
+          </div>
+        </div>
+
+        <!-- 지역 인식 안내 (원본 유지) -->
+        <div style="background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;padding:10px 12px;font-size:11px;color:#166534;line-height:1.8;margin-bottom:16px;">
+          <div style="font-weight:700;margin-bottom:4px;"><i class="fas fa-info-circle"></i> 지역 자동 인식</div>
+          <strong>서울 25구</strong> 모두 인식 → 서울<br>
+          <strong>경기도</strong> 31개 시·군 모두 인식 → 경기<br>
+          대전(유성·서·동·중·대덕구) → 대전 | 부산·대구·광주·인천·울산 각 구 → 해당 광역시<br>
+          전주·청주·천안·창원·강릉·속초·여수·순천·포항 등 → 해당 도시명
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ★ 새로 추가: 권리금 업브리핑 -->
+        <div class="slider-section">
+          <div class="opt-label"><i class="fas fa-arrow-trend-up" style="color:#f59e0b;margin-right:4px;"></i> 권리금 업브리핑 설정</div>
+          <div class="slider-box">
+            <div class="slider-row">
+              <input type="range" id="upSlider" min="0" max="50" step="5" value="0" oninput="updateSlider()">
+              <div class="slider-val" id="upVal">+0%</div>
+            </div>
+            <div class="slider-preview" id="sliderPreview">
+              원본 권리금 그대로 등록 (업브리핑 없음)
+            </div>
+          </div>
+        </div>
+
+        <div class="divider"></div>
+
+        <!-- ★ 새로 추가: 월지출 세부내역 -->
+        <div class="expense-section">
+          <div class="expense-section-title"><i class="fas fa-chart-pie"></i> 매출내역 · 월지출 세부내역</div>
+
+          <!-- 요약 3칸 -->
+          <div class="expense-summary">
+            <div class="esc esc-b"><div class="esc-label">월 매출</div><div class="esc-val" id="sc-rev">0만</div><div class="esc-pct">100%</div></div>
+            <div class="esc esc-r"><div class="esc-label">월 지출</div><div class="esc-val" id="sc-exp">0만</div><div class="esc-pct" id="sc-exp-pct">0%</div></div>
+            <div class="esc esc-g"><div class="esc-label">월 순수익</div><div class="esc-val" id="sc-prf">0만</div><div class="esc-pct" id="sc-prf-pct">0%</div></div>
+          </div>
+
+          <!-- 월 매출 입력 -->
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;color:#64748b;font-weight:600;margin-bottom:4px;">월 매출 <span style="color:#94a3b8;font-weight:400;">(만원)</span></div>
+            <div class="exp-inp-wrap">
+              <input type="number" class="exp-inp" id="e-rev" placeholder="예: 3000" oninput="recalcExpense()" style="width:100%;padding:8px 36px 8px 10px;">
+              <span class="exp-unit">만원</span>
+            </div>
+          </div>
+
+          <div class="divider"></div>
+          <div style="font-size:11px;color:#64748b;font-weight:600;margin-bottom:8px;">월 지출 항목별 입력</div>
+
+          <!-- 재료비 -->
+          <div class="exp-item">
+            <div class="exp-row">
+              <div class="exp-label">재료비</div>
+              <div class="exp-inp-wrap"><input type="number" class="exp-inp" id="e-mat" placeholder="0" oninput="recalcExpense()"><span class="exp-unit">만</span></div>
+              <div class="exp-pct-badge" id="p-mat">0만 / 0%</div>
+            </div>
+            <div class="exp-bar-row"><div></div><div class="exp-bar-bg"><div class="exp-bar-fill" id="b-mat" style="width:0%;background:linear-gradient(90deg,#60a5fa,#2563eb);"></div></div></div>
+          </div>
+          <!-- 인건비 -->
+          <div class="exp-item">
+            <div class="exp-row">
+              <div class="exp-label">인건비</div>
+              <div class="exp-inp-wrap"><input type="number" class="exp-inp" id="e-lab" placeholder="0" oninput="recalcExpense()"><span class="exp-unit">만</span></div>
+              <div class="exp-pct-badge" id="p-lab">0만 / 0%</div>
+            </div>
+            <div class="exp-bar-row"><div></div><div class="exp-bar-bg"><div class="exp-bar-fill" id="b-lab" style="width:0%;background:linear-gradient(90deg,#a78bfa,#7c3aed);"></div></div></div>
+          </div>
+          <!-- 관리비 -->
+          <div class="exp-item">
+            <div class="exp-row">
+              <div class="exp-label">관리비</div>
+              <div class="exp-inp-wrap"><input type="number" class="exp-inp" id="e-mgt" placeholder="0" oninput="recalcExpense()"><span class="exp-unit">만</span></div>
+              <div class="exp-pct-badge" id="p-mgt">0만 / 0%</div>
+            </div>
+            <div class="exp-bar-row"><div></div><div class="exp-bar-bg"><div class="exp-bar-fill" id="b-mgt" style="width:0%;background:linear-gradient(90deg,#34d399,#059669);"></div></div></div>
+          </div>
+          <!-- 월비용(월세) -->
+          <div class="exp-item">
+            <div class="exp-row">
+              <div class="exp-label">월비용(월세)</div>
+              <div class="exp-inp-wrap"><input type="number" class="exp-inp" id="e-rnt" placeholder="0" oninput="recalcExpense()"><span class="exp-unit">만</span></div>
+              <div class="exp-pct-badge" id="p-rnt">0만 / 0%</div>
+            </div>
+            <div class="exp-bar-row"><div></div><div class="exp-bar-bg"><div class="exp-bar-fill" id="b-rnt" style="width:0%;background:linear-gradient(90deg,#f59e0b,#d97706);"></div></div></div>
+          </div>
+          <!-- 기타경비 -->
+          <div class="exp-item">
+            <div class="exp-row">
+              <div class="exp-label">기타경비</div>
+              <div class="exp-inp-wrap"><input type="number" class="exp-inp" id="e-oth" placeholder="0" oninput="recalcExpense()"><span class="exp-unit">만</span></div>
+              <div class="exp-pct-badge" id="p-oth">0만 / 0%</div>
+            </div>
+            <div class="exp-bar-row"><div></div><div class="exp-bar-bg"><div class="exp-bar-fill" id="b-oth" style="width:0%;background:linear-gradient(90deg,#fb7185,#e11d48);"></div></div></div>
+          </div>
+
+          <!-- 합계 -->
+          <div class="exp-total-row">
+            <div class="exp-total-label"><i class="fas fa-sigma" style="color:#2563eb;margin-right:4px;"></i> 월 지출 합계</div>
+            <div class="exp-total-val" id="tot-exp">0만원</div>
+          </div>
+
+          <!-- 순수익 배너 -->
+          <div class="profit-banner">
+            <div>
+              <div class="pb-label"><i class="fas fa-won-sign" style="margin-right:4px;"></i> 월 순수익</div>
+              <div class="pb-formula" id="pb-formula">월매출 - 월지출 합산 = 0만원</div>
+            </div>
+            <div>
+              <div class="pb-value" id="pb-value">0만원</div>
+              <div class="pb-pct" id="pb-pct">수익률 0%</div>
+            </div>
+          </div>
+
+          <!-- 도넛 차트 -->
+          <div class="chart-wrap"><canvas id="donutChart" width="190" height="190"></canvas></div>
+
+        </div>
+        <!-- /월지출 세부내역 -->
+
+      </div>
+    </div>
+
+  </div><!-- /top-cards -->
+
+  <!-- ===== 결과 카드 (원본 구조 완전 유지) ===== -->
+  <div class="card" id="resultCard" style="display:none;">
+    <div class="card-hd">
+      <i class="fas fa-table"></i> 변환 결과
+      <span id="resultCount" style="font-size:12px;opacity:.8;margin-left:6px;"></span>
+      <span class="privacy-badge" style="margin-left:8px;"><i class="fas fa-lock"></i> 지점명·주소 제거됨</span>
+      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn btn-ghost btn-sm" onclick="regenAll()"><i class="fas fa-sync"></i> 제목 재생성</button>
+        <button class="btn btn-success btn-sm" onclick="exportCSV()"><i class="fas fa-file-csv"></i> CSV 저장</button>
+        <button class="btn btn-primary btn-sm" onclick="exportXLSX()"><i class="fas fa-file-excel"></i> 엑셀 저장</button>
+      </div>
+    </div>
+    <div class="card-bd" style="padding:14px 20px 0;">
+      <div class="stat-bar" id="statBar"></div>
+    </div>
+    <div style="padding:0 16px 16px;">
+      <div class="result-table-wrap">
+        <table class="result-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>브랜드명</th>
+              <th>층</th>
+              <th>평</th>
+              <th>보증금</th>
+              <th>권리금(원본)</th>
+              <th>권리금(등록)</th>
+              <th>월세</th>
+              <th>월매출</th>
+              <th>월순수익</th>
+              <th style="min-width:220px;">상품명 제목<br><small style="font-weight:400;opacity:.7;">(클릭 수정)</small></th>
+              <th>패턴</th>
+              <th>지역</th>
+              <th style="min-width:160px;">해시태그</th>
+              <th style="min-width:280px;">사업체 상세설명</th>
+              <th>복사</th>
+            </tr>
+          </thead>
+          <tbody id="resultBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /page-wrap -->
+
+<div id="toast" class="toast"><i class="fas fa-check-circle" style="color:#4ade80;"></i><span id="toastMsg"></span></div>
+
+<script>
+/* ════════════════════════════════
+   전역
+════════════════════════════════ */
+let rows = [];
+let donutChart = null;
+
+/* ════════════════════════════════
+   탭 전환 (원본)
+════════════════════════════════ */
+function switchTab(t, btn) {
+  document.querySelectorAll('.inp-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  document.getElementById('inp-paste').style.display = t === 'paste' ? '' : 'none';
+  document.getElementById('inp-file').style.display  = t === 'file'  ? '' : 'none';
+}
+
+/* ════════════════════════════════
+   드롭존 (원본)
+════════════════════════════════ */
+const dz = document.getElementById('dropzone');
+dz.addEventListener('dragover',  e => { e.preventDefault(); dz.classList.add('dragover'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+});
+
+function handleFile(file) {
+  const info = document.getElementById('fileInfo');
+  info.style.display = 'block';
+  info.innerHTML = `<i class="fas fa-spinner fa-spin"></i> ${file.name} 읽는 중...`;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const wb   = XLSX.read(e.target.result, { type: 'binary' });
+      const ws   = wb.Sheets[wb.SheetNames[0]];
+      const raw  = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+      const text = raw.map(r => r.join('\t')).join('\n');
+      document.getElementById('pasteText').value = text;
+      switchTab('paste', document.querySelectorAll('.inp-tab')[0]);
+      parsePaste();
+      info.innerHTML = `<i class="fas fa-check-circle" style="color:#16a34a;"></i> ${file.name} 로드 완료`;
+    } catch(err) {
+      info.innerHTML = `<i class="fas fa-times-circle" style="color:red;"></i> 오류: ${err.message}`;
+    }
+  };
+  reader.readAsBinaryString(file);
+}
+
+/* ════════════════════════════════
+   ★ 권리금 업브리핑 슬라이더
+════════════════════════════════ */
+function updateSlider() {
+  const v  = parseInt(document.getElementById('upSlider').value);
+  const ex = Math.round(1000 * (1 + v / 100));
+  document.getElementById('upVal').textContent = '+' + v + '%';
+  document.getElementById('sliderPreview').innerHTML = v === 0
+    ? '원본 권리금 그대로 등록 (업브리핑 없음)'
+    : `원본 1,000만 → 등록 <strong style="color:#d97706;">${ex.toLocaleString()}만</strong> (+${v}%)`;
+  if (rows.length) renderResult(rows);
+}
+
+/* ════════════════════════════════
+   ★ 월지출 계산
+════════════════════════════════ */
+function recalcExpense() {
+  const rev = parseFloat(document.getElementById('e-rev').value) || 0;
+  const mat = parseFloat(document.getElementById('e-mat').value) || 0;
+  const lab = parseFloat(document.getElementById('e-lab').value) || 0;
+  const mgt = parseFloat(document.getElementById('e-mgt').value) || 0;
+  const rnt = parseFloat(document.getElementById('e-rnt').value) || 0;
+  const oth = parseFloat(document.getElementById('e-oth').value) || 0;
+  const tot = mat + lab + mgt + rnt + oth;
+  const prf = rev - tot;
+  const ep  = rev > 0 ? (tot / rev * 100).toFixed(1) : 0;
+  const pp  = rev > 0 ? (prf / rev * 100).toFixed(1) : 0;
+
+  document.getElementById('sc-rev').textContent      = rev.toLocaleString() + '만';
+  document.getElementById('sc-exp').textContent      = tot.toLocaleString() + '만';
+  document.getElementById('sc-exp-pct').textContent  = ep + '%';
+  document.getElementById('sc-prf').textContent      = prf.toLocaleString() + '만';
+  document.getElementById('sc-prf-pct').textContent  = pp + '%';
+  document.getElementById('tot-exp').textContent     = tot.toLocaleString() + '만원';
+  document.getElementById('pb-value').textContent    = prf.toLocaleString() + '만원';
+  document.getElementById('pb-formula').textContent  = `월매출 ${rev.toLocaleString()}만 - 지출 ${tot.toLocaleString()}만 = ${prf.toLocaleString()}만원`;
+  document.getElementById('pb-pct').textContent      = `수익률 ${pp}%`;
+
+  const items = [
+    { k:'mat', v:mat, c:'linear-gradient(90deg,#60a5fa,#2563eb)' },
+    { k:'lab', v:lab, c:'linear-gradient(90deg,#a78bfa,#7c3aed)' },
+    { k:'mgt', v:mgt, c:'linear-gradient(90deg,#34d399,#059669)' },
+    { k:'rnt', v:rnt, c:'linear-gradient(90deg,#f59e0b,#d97706)' },
+    { k:'oth', v:oth, c:'linear-gradient(90deg,#fb7185,#e11d48)' },
+  ];
+  items.forEach(({ k, v, c }) => {
+    const pc = rev > 0 ? (v / rev * 100).toFixed(1) : '0.0';
+    const w  = rev > 0 ? Math.min(v / rev * 100, 100) : 0;
+    const bd = document.getElementById('p-' + k);
+    bd.textContent = v.toLocaleString() + '만 / ' + pc + '%';
+    bd.className   = 'exp-pct-badge' + (parseFloat(pc) > 30 ? ' hi' : '');
+    document.getElementById('b-' + k).style.width      = w + '%';
+    document.getElementById('b-' + k).style.background = c;
+  });
+
+  updateDonut(mat, lab, mgt, rnt, oth, tot);
+  if (rows.length) renderResult(rows);
+}
+
+function getProfit() {
+  const rev = parseFloat(document.getElementById('e-rev').value) || 0;
+  const mat = parseFloat(document.getElementById('e-mat').value) || 0;
+  const lab = parseFloat(document.getElementById('e-lab').value) || 0;
+  const mgt = parseFloat(document.getElementById('e-mgt').value) || 0;
+  const rnt = parseFloat(document.getElementById('e-rnt').value) || 0;
+  const oth = parseFloat(document.getElementById('e-oth').value) || 0;
+  return rev - (mat + lab + mgt + rnt + oth);
+}
+
+/* ════════════════════════════════
+   ★ 도넛 차트
+════════════════════════════════ */
+function updateDonut(mat, lab, mgt, rnt, oth, tot) {
+  const ctx    = document.getElementById('donutChart').getContext('2d');
+  const data   = [mat, lab, mgt, rnt, oth];
+  const colors = ['#3b82f6','#8b5cf6','#10b981','#f59e0b','#ef4444'];
+  const labels = ['재료비','인건비','관리비','월비용','기타경비'];
+  if (donutChart) { donutChart.data.datasets[0].data = data; donutChart.update(); return; }
+  donutChart = new Chart(ctx, {
+    type: 'doughnut',
+    data: { labels, datasets: [{ data, backgroundColor: colors, borderWidth: 2, borderColor: '#fff' }] },
+    options: {
+      cutout: '62%',
+      plugins: {
+        legend: { position: 'bottom', labels: { font: { size: 10 }, padding: 6 } },
+        tooltip: { callbacks: { label: c => ` ${c.label}: ${c.raw.toLocaleString()}만 (${tot > 0 ? (c.raw/tot*100).toFixed(1) : 0}%)` } }
+      }
+    }
+  });
+}
+
+/* ════════════════════════════════
+   지역 인식 (원본)
+════════════════════════════════ */
+function detectRegion(addr) {
+  if (!addr) return '';
+  const seoulGu = ['강남','강동','강북','강서','관악','광진','구로','금천','노원','도봉','동대문','동작','마포','서대문','서초','성동','성북','송파','양천','영등포','용산','은평','종로','중구','중랑'];
+  for (const g of seoulGu) if (addr.includes(g)) return '서울';
+  const daejeon = ['유성구','서구','동구','중구','대덕구'];
+  for (const g of daejeon) if (addr.includes(g)) return '대전';
+  const busan = ['해운대','수영','연제','동래','금정','사상','사하','영도','부산진','기장'];
+  for (const g of busan) if (addr.includes(g)) return '부산';
+  const daegu = ['수성구','달서구','달성군'];
+  for (const g of daegu) if (addr.includes(g)) return '대구';
+  const cities = ['수원','성남','용인','고양','부천','안산','화성','파주','의정부','안양','시흥','군포','하남','김포','양주','평택','전주','청주','천안','창원','포항','강릉','속초','여수','순천','제주','구미','거제','통영','세종'];
+  for (const c of cities) if (addr.includes(c)) return c;
+  if (addr.includes('서울')) return '서울';
+  if (addr.includes('경기')) return '경기';
+  if (addr.includes('광주')) return '광주';
+  if (addr.includes('인천')) return '인천';
+  if (addr.includes('울산')) return '울산';
+  const m = addr.match(/([가-힣]+[시군구])/);
+  return m ? m[1] : (addr.split(/\s/)[0] || '');
+}
+
+/* ════════════════════════════════
+   업종 인식
+════════════════════════════════ */
+function detectCat(brand, biz) {
+  const s = (brand + biz).toLowerCase();
+  if (/커피|카페|coffee|compose|컴포즈|메가커피|빽다방|투썸|이디야|할리스/.test(s)) return '소형카페';
+  if (/치킨|bbq|굽네|교촌|bhc/.test(s)) return '치킨';
+  if (/호프|맥주|역전할머니/.test(s)) return '호프';
+  if (/편의점|gs25|cu|세븐/.test(s)) return '편의점';
+  if (/서브웨이|패스트|버거/.test(s)) return '패스트푸드';
+  if (/파리바게뜨|뚜레쥬르|베이커리/.test(s)) return '베이커리';
+  if (/주점|이자카야/.test(s)) return '주점';
+  if (/정관장/.test(s)) return '건강식품';
+  return '프랜차이즈';
+}
+
+/* ════════════════════════════════
+   파싱 (원본)
+════════════════════════════════ */
+function parsePaste() {
+  const raw = document.getElementById('pasteText').value;
+  if (!raw.trim()) { showToast('텍스트를 붙여넣어 주세요!', true); return; }
+  const lines  = raw.split(/\r?\n/).map(l => l.trim()).filter(l => l);
+  const blocks = [];
+  let cur = [];
+  for (const line of lines) {
+    if (/^\d+\t(활성|관심)/.test(line)) { if (cur.length) blocks.push(cur); cur = [line]; }
+    else cur.push(line);
+  }
+  if (cur.length) blocks.push(cur);
+  if (!blocks.length) { showToast('인식 가능한 데이터가 없습니다. 샘플을 참고해주세요.', true); return; }
+  rows = blocks.map(parseBlock).filter(Boolean);
+  renderResult(rows);
+  showToast(`✅ ${rows.length}건 변환 완료!`);
+}
+
+function parseBlock(block) {
+  try {
+    const cols      = block.join('\t').split('\t').map(s => s.trim());
+    const num       = cols[0] || '';
+    const status    = cols[1] || '';
+    const kind      = cols[2] || '';
+    const manager   = cols[3] || '';
+    const biz       = cols[4] || '';
+    const brandFull = cols[5] || '';
+    const brand     = brandFull.replace(/-[가-힣A-Za-z0-9]+점$/, '').trim();
+    const addr      = cols[6] || '';
+    const region    = detectRegion(addr);
+    const floor     = cols[7] || '';
+    const area      = cols[8] ? cols[8] + '평' : '';
+    const n = s => parseInt((s || '0').replace(/[^0-9]/g, '')) || 0;
+    return {
+      num, status, kind, manager, biz, brand, brandFull, addr, region, floor, area,
+      deposit: n(cols[9]), premium: n(cols[10]), total: n(cols[11]),
+      rent: n(cols[12]), sales: n(cols[13]), category: detectCat(brand, biz)
+    };
+  } catch(e) { return null; }
+}
+
+/* ════════════════════════════════
+   상품명 생성 (원본 패턴 유지 + 순수익 반영)
+════════════════════════════════ */
+function buildTitle(r, pattern, upPct) {
+  const region  = r.region;
+  const brand   = r.brand;
+  const premium = Math.round(r.premium * (1 + upPct / 100));
+  const sales   = r.sales;
+  const profit  = getProfit();
+  const feats   = [];
+  if (profit > 0) feats.push(`순수익 약 ${profit.toLocaleString()}만`);
+  if (document.getElementById('opt_sales').checked && sales)    feats.push(`월매출 ${sales.toLocaleString()}만`);
+  if (document.getElementById('opt_instant').checked)           feats.push('즉시 운영 가능');
+  if (document.getElementById('opt_highsales').checked)         feats.push('권리금 대비 높은 매출');
+  if (document.getElementById('opt_franchise').checked)         feats.push('프랜차이즈 본사 지원');
+  const f = feats.length ? feats.join(' / ') : '즉시 운영 가능';
+  switch(pattern) {
+    case 'A': return `+${region} ${brand} 양도양수 / ${f} / 권리금 ${premium.toLocaleString()}만`;
+    case 'B': return `+${brand} 양도양수 / ${region} / 월매출 ${sales.toLocaleString()}만 / 권리금 ${premium.toLocaleString()}만`;
+    case 'C': return `+${region} ${brand} / 권리금 ${premium.toLocaleString()}만 / 월매출 ${sales.toLocaleString()}만`;
+    case 'D': return `+${region} ${brand} 양도 / 월매출 ${sales.toLocaleString()}만 / 직원운영`;
+    case 'E': return `+${brand} ${region} 양도양수 / 권리금 ${premium.toLocaleString()}만 / ${f}`;
+    default:  return `+${region} ${brand} 양도양수 / ${f} / 권리금 ${premium.toLocaleString()}만`;
+  }
+}
+
+/* ════════════════════════════════
+   해시태그 생성
+════════════════════════════════ */
+function buildTag(r, upPct) {
+  const premium = Math.round(r.premium * (1 + upPct / 100));
+  const profit  = getProfit();
+  const pt = premium < 5000 ? '#5천만미만' : premium < 10000 ? '#5천~1억' : premium < 15000 ? '#1억~1억5천' : premium < 20000 ? '#1억5천~2억' : '#2억이상';
+  const pp = profit >= 1000 ? '#1000만원이상' : profit >= 500 ? '#500~1000만' : profit >= 300 ? '#300~500만' : '#300만미만';
+  return `#${r.region} #${r.category} ${pt} ${pp}`;
+}
+
+/* ════════════════════════════════
+   상세설명 생성
+════════════════════════════════ */
+function buildDesc(r, upPct) {
+  const premium = Math.round(r.premium * (1 + upPct / 100));
+  const profit  = getProfit();
+  return `■ 복합상권
+• ${r.region} ${r.brand} 양도양수 매장
+• 층수: ${r.floor}층 / 면적: ${r.area}
+• 비교적 저렴한 권리금 ${premium.toLocaleString()}만원
+• 총 창업비용 ${(r.deposit + premium).toLocaleString()}만원 후반대!!
+
+■ 매출 및 수익구조
+• 평균 월매출 ${r.sales.toLocaleString()}만원${profit > 0 ? '\n• 직접 운영 시 월 수익 ' + profit.toLocaleString() + '만원 이상' : ''}
+
+■ 컨설턴트 의견
+• 매출 대비 저렴한 권리금
+• 유동인구 흐름이 좋은 핵심 상권
+• 매출 상승 호재 있음`;
+}
+
+/* ════════════════════════════════
+   결과 렌더링 (원본 테이블 구조 + 새 컬럼 추가)
+════════════════════════════════ */
+function renderResult(data) {
+  const card    = document.getElementById('resultCard');
+  const body    = document.getElementById('resultBody');
+  const statBar = document.getElementById('statBar');
+  const upPct   = parseInt(document.getElementById('upSlider').value);
+  const profit  = getProfit();
+
+  if (!data || !data.length) { clearResult(); return; }
+  card.style.display = '';
+  document.getElementById('resultCount').textContent = data.length + '건';
+
+  statBar.innerHTML = `
+    <div class="stat-chip"><strong>${data.length}</strong><span>총 매물수</span></div>
+    <div class="stat-chip"><strong>${[...new Set(data.map(r=>r.region))].length}</strong><span>지역수</span></div>
+    <div class="stat-chip"><strong>${[...new Set(data.map(r=>r.brand))].length}</strong><span>브랜드수</span></div>
+    ${upPct > 0 ? `<div class="stat-chip"><strong style="color:#d97706;">+${upPct}%</strong><span>권리금 업브리핑</span></div>` : ''}
+    ${profit > 0 ? `<div class="stat-chip"><strong style="color:#16a34a;">${profit.toLocaleString()}만</strong><span>월 순수익</span></div>` : ''}`;
+
+  body.innerHTML = data.map((r, i) => {
+    const premiumUp = Math.round(r.premium * (1 + upPct / 100));
+    const title     = buildTitle(r, 'A', upPct);
+    const tag       = buildTag(r, upPct);
+    const desc      = buildDesc(r, upPct);
+
+    return `<tr>
+      <td style="text-align:center;color:#94a3b8;">${r.num || i+1}</td>
+      <td style="white-space:nowrap;font-weight:600;color:#1e3a5f;">${r.brand}</td>
+      <td style="white-space:nowrap;text-align:center;">${r.floor}층</td>
+      <td style="white-space:nowrap;text-align:center;">${r.area}</td>
+      <td class="num">${r.deposit.toLocaleString()}만</td>
+      <td class="num" style="color:#94a3b8;text-decoration:${upPct>0?'line-through':'none'};">${r.premium.toLocaleString()}만</td>
+      <td class="num" style="color:#d97706;font-weight:700;">${premiumUp.toLocaleString()}만${upPct>0?'<span style="font-size:9px;color:#f59e0b;"> +'+upPct+'%</span>':''}</td>
+      <td class="num">${r.rent.toLocaleString()}만</td>
+      <td class="num">${r.sales.toLocaleString()}만</td>
+      <td class="num" style="color:#16a34a;font-weight:700;">${profit > 0 ? profit.toLocaleString()+'만' : '-'}</td>
+      <td>
+        <select class="td-select" onchange="updateTitle(this,${i})" data-idx="${i}">
+          <option value="A">A패턴</option>
+          <option value="B">B패턴</option>
+          <option value="C">C패턴</option>
+          <option value="D">D패턴</option>
+          <option value="E">E패턴</option>
+        </select>
+        <div class="td-title" id="title-${i}" style="margin-top:4px;">${title}</div>
+      </td>
+      <td style="text-align:center;white-space:nowrap;">${'A'}</td>
+      <td style="white-space:nowrap;">${r.region}</td>
+      <td><input class="td-tag-input" id="tag-${i}" value="${tag}" style="width:160px;"></td>
+      <td><textarea class="td-desc-input" id="desc-${i}" rows="4">${desc}</textarea></td>
+      <td><button class="td-copy" onclick="copyRow(${i})" title="복사"><i class="fas fa-copy"></i></button></td>
+    </tr>`;
+  }).join('');
+}
+
+/* ════════════════════════════════
+   패턴 드롭다운 업데이트
+════════════════════════════════ */
+function updateTitle(sel, i) {
+  const upPct = parseInt(document.getElementById('upSlider').value);
+  document.getElementById('title-' + i).textContent = buildTitle(rows[i], sel.value, upPct);
+  // 패턴 컬럼 텍스트 업데이트
+  sel.closest('tr').cells[11].textContent = sel.value;
+}
+
+/* ════════════════════════════════
+   전체 재생성
+════════════════════════════════ */
+function regenAll() {
+  if (!rows.length) return;
+  renderResult(rows);
+  showToast('전체 재생성 완료!');
+}
+
+/* ════════════════════════════════
+   복사
+════════════════════════════════ */
+function copyRow(i) {
+  const title = document.getElementById('title-' + i).textContent;
+  const tag   = document.getElementById('tag-'   + i).value;
+  const desc  = document.getElementById('desc-'  + i).value;
+  const upPct = parseInt(document.getElementById('upSlider').value);
+  const r     = rows[i];
+  const premiumUp = Math.round(r.premium * (1 + upPct / 100));
+  const profit    = getProfit();
+  const mat = parseFloat(document.getElementById('e-mat').value) || 0;
+  const lab = parseFloat(document.getElementById('e-lab').value) || 0;
+  const mgt = parseFloat(document.getElementById('e-mgt').value) || 0;
+  const rnt = parseFloat(document.getElementById('e-rnt').value) || 0;
+  const oth = parseFloat(document.getElementById('e-oth').value) || 0;
+  const tot = mat+lab+mgt+rnt+oth;
+  const rev = parseFloat(document.getElementById('e-rev').value) || 0;
+  const cName  = document.getElementById('cName').value;
+  const cPhone = document.getElementById('cPhone').value;
+
+  const text = `${title}
+
+사업체 위치: ${r.region}
+사업체 업종: ${tag}
+사업체 크기: ${r.area} / ${r.floor}층
+
+월순이익: ${profit > 0 ? profit.toLocaleString()+'만 원 이상' : '-'}
+월총매출: ${r.sales.toLocaleString()}만 원
+총권리금: ${premiumUp.toLocaleString()}만 원
+${cName} 컨설턴트 ${cPhone}
+
+[매출내역]
+월매출: ${rev.toLocaleString()}만원 (100%)
+월지출: ${tot.toLocaleString()}만원 (${rev>0?(tot/rev*100).toFixed(1):0}%)
+월수익: ${profit.toLocaleString()}만원 (${rev>0?(profit/rev*100).toFixed(1):0}%)
+
+[월지출세부]
+재료비: ${mat.toLocaleString()}만 / ${rev>0?(mat/rev*100).toFixed(1):0}%
+인건비: ${lab.toLocaleString()}만 / ${rev>0?(lab/rev*100).toFixed(1):0}%
+관리비: ${mgt.toLocaleString()}만 / ${rev>0?(mgt/rev*100).toFixed(1):0}%
+월비용: ${rnt.toLocaleString()}만 / ${rev>0?(rnt/rev*100).toFixed(1):0}%
+기타경비: ${oth.toLocaleString()}만 / ${rev>0?(oth/rev*100).toFixed(1):0}%
+
+${desc}
+
+${tag}`;
+
+  navigator.clipboard.writeText(text).then(() => {
+    const btn = document.querySelectorAll('.td-copy')[i];
+    btn.innerHTML = '<i class="fas fa-check" style="color:#16a34a;"></i>';
+    setTimeout(() => { btn.innerHTML = '<i class="fas fa-copy"></i>'; }, 1500);
+    showToast('복사 완료!');
+  });
+}
+
+/* ════════════════════════════════
+   CSV / XLSX 내보내기 (원본)
+════════════════════════════════ */
+function exportCSV() {
+  if (!rows.length) return;
+  const upPct   = parseInt(document.getElementById('upSlider').value);
+  const headers = ['브랜드','지역','층','평','보증금','권리금(원본)','권리금(등록)','월세','월매출','월순수익','상품명','해시태그','상세설명'];
+  const profit  = getProfit();
+  const data    = rows.map((r, i) => [
+    r.brand, r.region, r.floor, r.area,
+    r.deposit, r.premium, Math.round(r.premium*(1+upPct/100)),
+    r.rent, r.sales, profit > 0 ? profit : '',
+    document.getElementById('title-'+i)?.textContent || buildTitle(r,'A',upPct),
+    document.getElementById('tag-'+i)?.value || buildTag(r,upPct),
+    document.getElementById('desc-'+i)?.value || buildDesc(r,upPct),
+  ]);
+  const csv  = [headers,...data].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const a    = document.createElement('a');
+  a.href     = URL.createObjectURL(blob);
+  a.download = 'jcm_db_' + new Date().toISOString().slice(0,10) + '.csv';
+  a.click();
+}
+
+function exportXLSX() {
+  if (!rows.length) return;
+  const upPct  = parseInt(document.getElementById('upSlider').value);
+  const profit = getProfit();
+  const ws_data = [
+    ['브랜드','지역','층','평','보증금','권리금(원본)','권리금(등록)','월세','월매출','월순수익','상품명','해시태그','상세설명'],
+    ...rows.map((r,i) => [
+      r.brand, r.region, r.floor, r.area,
+      r.deposit, r.premium, Math.round(r.premium*(1+upPct/100)),
+      r.rent, r.sales, profit > 0 ? profit : '',
+      document.getElementById('title-'+i)?.textContent || buildTitle(r,'A',upPct),
+      document.getElementById('tag-'+i)?.value || buildTag(r,upPct),
+      document.getElementById('desc-'+i)?.value || buildDesc(r,upPct),
+    ])
+  ];
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet(ws_data);
+  XLSX.utils.book_append_sheet(wb, ws, 'JCM매물');
+  XLSX.writeFile(wb, 'jcm_db_' + new Date().toISOString().slice(0,10) + '.xlsx');
+}
+
+/* ════════════════════════════════
+   샘플 데이터 (원본)
+════════════════════════════════ */
+function loadSample() {
+  document.getElementById('pasteText').value =
+`1	활성	일반	박상현1	테이크아웃	컴포즈커피-천호2동점	강동구 천호동 357-12	1	15	5000	15000	20000	350	3000		2026.06.17
+2	활성	일반	이정민	카페	투썸플레이스-대전과학기술대점	서구 복수동 275-31	12	120	8000	23000	31000	600	5506		2026.06.17
+3	활성	관심	박상현1	호프	역전할머니맥주-평택소사벌점	평택시 비전동 1100-2	0	55	10000	5000	15000	600	5600		2026.06.17`;
+  // 샘플 월지출도 자동 입력
+  document.getElementById('e-rev').value = 3000;
+  document.getElementById('e-mat').value = 1050;
+  document.getElementById('e-lab').value = 450;
+  document.getElementById('e-mgt').value = 80;
+  document.getElementById('e-rnt').value = 350;
+  document.getElementById('e-oth').value = 100;
+  recalcExpense();
+  showToast('샘플 데이터 로드됨!');
+}
+
+/* ════════════════════════════════
+   초기화 (원본)
+════════════════════════════════ */
+function clearResult() {
+  document.getElementById('resultCard').style.display = 'none';
+  document.getElementById('resultBody').innerHTML = '';
+  document.getElementById('statBar').innerHTML = '';
+}
+
+/* ════════════════════════════════
+   토스트 (원본)
+════════════════════════════════ */
+function showToast(msg, err = false) {
+  const t = document.getElementById('toast');
+  t.querySelector('i').style.color = err ? '#f87171' : '#4ade80';
+  document.getElementById('toastMsg').textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// 초기 실행
+updateSlider();
+</script>
+</body>
+</html>
